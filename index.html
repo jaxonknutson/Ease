@@ -27,15 +27,23 @@
   }
 
   button {
-    font-size: 20px;
-    padding: 18px;
-    margin: 10px;
+    font-size: 18px;
+    padding: 16px;
+    margin: 8px;
     width: 80%;
     max-width: 320px;
     border-radius: 14px;
     border: none;
-    background: white;
-    color: black;
+    background: #222;
+    color: white;
+    transition: 0.2s;
+  }
+
+  /* SELECTED STATE */
+  .selected {
+    background: #4caf50 !important;
+    color: black !important;
+    transform: scale(1.03);
   }
 
   #pvtBtn {
@@ -66,24 +74,24 @@
   <button id="pvtBtn" onclick="pvtClick()">WAIT</button>
 </div>
 
-<!-- POSTURE + QUESTIONS -->
+<!-- POSTURE -->
 <div class="screen" id="posture">
   <h2>Body Check</h2>
 
-  <p>Posture?</p>
-  <button onclick="setPosture('open')">Open</button>
-  <button onclick="setPosture('neutral')">Neutral</button>
-  <button onclick="setPosture('tight')">Tight</button>
+  <p>Posture</p>
+  <button onclick="setPosture(this,'open')">Open</button>
+  <button onclick="setPosture(this,'neutral')">Neutral</button>
+  <button onclick="setPosture(this,'tight')">Tight</button>
 
-  <p>Energy?</p>
-  <button onclick="setEnergy('low')">Low</button>
-  <button onclick="setEnergy('normal')">Normal</button>
-  <button onclick="setEnergy('high')">High</button>
+  <p>Energy</p>
+  <button onclick="setEnergy(this,'low')">Low</button>
+  <button onclick="setEnergy(this,'normal')">Normal</button>
+  <button onclick="setEnergy(this,'high')">High</button>
 
-  <p>Focus right now?</p>
-  <button onclick="setFocus('clear')">Clear</button>
-  <button onclick="setFocus('scattered')">Scattered</button>
-  <button onclick="setFocus('stuck')">Stuck</button>
+  <p>Focus</p>
+  <button onclick="setFocus(this,'clear')">Clear</button>
+  <button onclick="setFocus(this,'scattered')">Scattered</button>
+  <button onclick="setFocus(this,'stuck')">Stuck</button>
 
   <button onclick="startBreathing()">Continue</button>
 </div>
@@ -95,20 +103,20 @@
 
   <h1 id="breathTimer">30</h1>
 
-  <p>Enter breaths counted:</p>
+  <p>Breaths counted:</p>
   <input id="breathCount" type="number" style="font-size:20px; padding:10px; width:120px; text-align:center;">
 
   <button onclick="startHeart()">Next</button>
 </div>
 
-<!-- HEART RATE -->
+<!-- HEART -->
 <div class="screen" id="heart">
   <h2>Heart Rate Test</h2>
-  <p class="small">Count pulse for 15 seconds ×4</p>
+  <p class="small">Count beats for 15 seconds ×4</p>
 
   <h1 id="heartTimer">15</h1>
 
-  <p>Enter beats counted:</p>
+  <p>Beats counted:</p>
   <input id="heartCount" type="number" style="font-size:20px; padding:10px; width:120px; text-align:center;">
 
   <button onclick="finish()">Finish</button>
@@ -123,7 +131,7 @@
 
 <script>
 
-/* ---------------- DATA ---------------- */
+/* ---------------- STATE ---------------- */
 let pvtRTs = [];
 let pvtStart;
 let waiting = false;
@@ -135,19 +143,27 @@ let focus = "";
 let breathRate = 0;
 let heartRate = 0;
 
-/* ---------------- NAV ---------------- */
+/* ---------------- SCREEN CONTROL ---------------- */
 function show(id){
   document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
   document.getElementById(id).style.display = 'flex';
 }
 
-/* ---------------- PVT ---------------- */
-let pvtTimeout;
+/* ---------------- BUTTON SELECTION UI ---------------- */
+function select(btn){
+  let siblings = btn.parentNode.querySelectorAll('button');
+  siblings.forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
 
+/* ---------------- START ---------------- */
 function startPVT(){
   show('pvt');
   nextTrial();
 }
+
+/* ---------------- PVT ---------------- */
+let pvtTimeout;
 
 function nextTrial(){
   let delay = Math.random()*2000 + 1000;
@@ -171,7 +187,7 @@ function pvtClick(){
   nextTrial();
 }
 
-/* move after 60 sec */
+/* auto transition */
 setTimeout(() => {
   clearTimeout(pvtTimeout);
   startPosture();
@@ -182,22 +198,29 @@ function startPosture(){
   show('posture');
 }
 
-function setPosture(v){ posture = v; }
-function setEnergy(v){ energy = v; }
-function setFocus(v){ focus = v; }
+function setPosture(btn,val){
+  posture = val;
+  select(btn);
+}
 
-function startBreathing(){
-  startBreathTimer();
+function setEnergy(btn,val){
+  energy = val;
+  select(btn);
+}
+
+function setFocus(btn,val){
+  focus = val;
+  select(btn);
 }
 
 /* ---------------- BREATHING ---------------- */
 let breathTime = 30;
 let breathInterval;
 
-function startBreathTimer(){
+function startBreathing(){
   show('breathing');
-  breathTime = 30;
 
+  breathTime = 30;
   breathInterval = setInterval(() => {
     breathTime--;
     document.getElementById("breathTimer").innerText = breathTime;
@@ -208,19 +231,19 @@ function startBreathTimer(){
   }, 1000);
 }
 
+/* ---------------- HEART ---------------- */
+let heartTime = 15;
+let heartInterval;
+
 function startHeart(){
   breathRate = parseInt(document.getElementById("breathCount").value || 0);
   startHeartTimer();
 }
 
-/* ---------------- HEART RATE ---------------- */
-let heartTime = 15;
-let heartInterval;
-
 function startHeartTimer(){
   show('heart');
-  heartTime = 15;
 
+  heartTime = 15;
   heartInterval = setInterval(() => {
     heartTime--;
     document.getElementById("heartTimer").innerText = heartTime;
@@ -231,6 +254,7 @@ function startHeartTimer(){
   }, 1000);
 }
 
+/* ---------------- RESULT ---------------- */
 function finish(){
   heartRate = parseInt(document.getElementById("heartCount").value || 0) * 4;
 
@@ -246,33 +270,26 @@ function finish(){
   let state = "";
   let reset = "";
 
-  /* ---------------- STATE LOGIC ---------------- */
-
   if(variability > 250){
     state = "Cognitive Overload";
-    reset = "60 sec single-focus + reduce inputs.";
+    reset = "Single-focus reset (60 sec).";
   }
-
   else if(avg > 450){
     state = "Low Energy";
-    reset = "Move + sunlight + hydration.";
+    reset = "Move + light exposure.";
   }
-
   else if(breathRate > 18 || heartRate > 90){
     state = "High Arousal";
-    reset = "Slow exhale breathing for 60 sec.";
+    reset = "Slow exhale breathing.";
   }
-
   else if(posture === "tight"){
     state = "Physical Tension";
-    reset = "Open chest + stand + reset posture.";
+    reset = "Open chest + stand.";
   }
-
   else if(focus === "stuck"){
     state = "Behavioral Block";
-    reset = "Start smallest possible action (2 min).";
+    reset = "Start smallest action.";
   }
-
   else {
     state = "Stable";
     reset = "No reset needed.";
