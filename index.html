@@ -1,242 +1,287 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>State Reset Check</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 20px;
-      background: #f7f7f7;
-    }
+<title>State Check</title>
 
-    h2 {
-      margin-top: 20px;
-    }
+<style>
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0f0f0f;
+    color: white;
+    overflow: hidden;
+  }
 
-    button {
-      font-size: 18px;
-      padding: 16px;
-      margin: 10px;
-      width: 80%;
-      max-width: 300px;
-      border-radius: 12px;
-      border: none;
-      background: #111;
-      color: white;
-    }
+  .screen {
+    display: none;
+    height: 100vh;
+    width: 100vw;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 20px;
+  }
 
-    .hidden { display: none; }
+  button {
+    font-size: 20px;
+    padding: 18px;
+    margin: 10px;
+    width: 80%;
+    max-width: 320px;
+    border-radius: 14px;
+    border: none;
+    background: white;
+    color: black;
+  }
 
-    #pvtButton {
-      font-size: 22px;
-      height: 120px;
-    }
+  #pvtBtn {
+    height: 160px;
+    font-size: 28px;
+  }
 
-    .card {
-      background: white;
-      padding: 20px;
-      border-radius: 16px;
-      margin-top: 20px;
-    }
-
-    .small {
-      font-size: 14px;
-      color: #666;
-    }
-  </style>
+  .small {
+    font-size: 14px;
+    opacity: 0.7;
+  }
+</style>
 </head>
 
 <body>
 
-<h2>3-Minute Reset Check</h2>
-<p class="small">Tap start when ready</p>
-
-<div id="startScreen">
-  <button onclick="startTest()">Start</button>
+<!-- ENTRY -->
+<div class="screen" id="start" style="display:flex;">
+  <h1>State Check</h1>
+  <p class="small">4-minute reset + signal test</p>
+  <button onclick="startPVT()">Start</button>
 </div>
 
 <!-- PVT -->
-<div id="pvtScreen" class="hidden card">
-  <h3>Tap ONLY when screen turns green</h3>
-  <p id="pvtStatus">Wait...</p>
-  <button id="pvtButton" onclick="pvtClick()">WAIT</button>
+<div class="screen" id="pvt">
+  <h2>Tap when GREEN</h2>
+  <p id="pvtStatus" class="small">Wait...</p>
+  <button id="pvtBtn" onclick="pvtClick()">WAIT</button>
 </div>
 
-<!-- Go/No-Go -->
-<div id="gngScreen" class="hidden card">
-  <h3>Tap GREEN only</h3>
-  <button id="gngButton" onclick="gngClick()">Start</button>
-</div>
+<!-- POSTURE + QUESTIONS -->
+<div class="screen" id="posture">
+  <h2>Body Check</h2>
 
-<!-- Body Check -->
-<div id="bodyScreen" class="hidden card">
-  <h3>Quick Check</h3>
-
-  <p>Posture</p>
+  <p>Posture?</p>
   <button onclick="setPosture('open')">Open</button>
   <button onclick="setPosture('neutral')">Neutral</button>
   <button onclick="setPosture('tight')">Tight</button>
 
-  <p>Breathing</p>
-  <button onclick="setBreath('slow')">Slow</button>
-  <button onclick="setBreath('normal')">Normal</button>
-  <button onclick="setBreath('fast')">Fast</button>
+  <p>Energy?</p>
+  <button onclick="setEnergy('low')">Low</button>
+  <button onclick="setEnergy('normal')">Normal</button>
+  <button onclick="setEnergy('high')">High</button>
 
-  <br>
-  <button onclick="finish()">Get Result</button>
+  <p>Focus right now?</p>
+  <button onclick="setFocus('clear')">Clear</button>
+  <button onclick="setFocus('scattered')">Scattered</button>
+  <button onclick="setFocus('stuck')">Stuck</button>
+
+  <button onclick="startBreathing()">Continue</button>
 </div>
 
-<!-- Result -->
-<div id="resultScreen" class="hidden card">
-  <h2 id="stateOutput"></h2>
-  <p id="resetOutput"></p>
+<!-- BREATHING -->
+<div class="screen" id="breathing">
+  <h2>Breathing Test</h2>
+  <p class="small">Count breaths for 30 seconds</p>
+
+  <h1 id="breathTimer">30</h1>
+
+  <p>Enter breaths counted:</p>
+  <input id="breathCount" type="number" style="font-size:20px; padding:10px; width:120px; text-align:center;">
+
+  <button onclick="startHeart()">Next</button>
+</div>
+
+<!-- HEART RATE -->
+<div class="screen" id="heart">
+  <h2>Heart Rate Test</h2>
+  <p class="small">Count pulse for 15 seconds ×4</p>
+
+  <h1 id="heartTimer">15</h1>
+
+  <p>Enter beats counted:</p>
+  <input id="heartCount" type="number" style="font-size:20px; padding:10px; width:120px; text-align:center;">
+
+  <button onclick="finish()">Finish</button>
+</div>
+
+<!-- RESULT -->
+<div class="screen" id="result">
+  <h1 id="stateOut"></h1>
+  <p id="resetOut"></p>
   <button onclick="location.reload()">Run Again</button>
 </div>
 
 <script>
-/* ---------------- STATE ---------------- */
-let pvtRTs = [];
-let gngErrors = 0;
-let posture = "";
-let breath = "";
 
-/* ---------------- START ---------------- */
-function startTest() {
-  document.getElementById("startScreen").classList.add("hidden");
-  startPVT();
+/* ---------------- DATA ---------------- */
+let pvtRTs = [];
+let pvtStart;
+let waiting = false;
+
+let posture = "";
+let energy = "";
+let focus = "";
+
+let breathRate = 0;
+let heartRate = 0;
+
+/* ---------------- NAV ---------------- */
+function show(id){
+  document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+  document.getElementById(id).style.display = 'flex';
 }
 
 /* ---------------- PVT ---------------- */
-let pvtStartTime;
-let waiting = false;
 let pvtTimeout;
 
-function startPVT() {
-  document.getElementById("pvtScreen").classList.remove("hidden");
+function startPVT(){
+  show('pvt');
   nextTrial();
 }
 
-function nextTrial() {
-  let delay = Math.random() * 2000 + 1000;
+function nextTrial(){
+  let delay = Math.random()*2000 + 1000;
 
-  document.getElementById("pvtButton").innerText = "WAIT";
+  document.getElementById("pvtBtn").innerText = "WAIT";
   document.getElementById("pvtStatus").innerText = "Wait...";
 
   waiting = false;
 
   pvtTimeout = setTimeout(() => {
-    document.getElementById("pvtButton").innerText = "TAP!";
+    document.getElementById("pvtBtn").innerText = "TAP!";
     document.getElementById("pvtStatus").innerText = "GO!";
-    pvtStartTime = Date.now();
+    pvtStart = Date.now();
     waiting = true;
   }, delay);
 }
 
-function pvtClick() {
-  if (!waiting) return;
-  let rt = Date.now() - pvtStartTime;
-  pvtRTs.push(rt);
+function pvtClick(){
+  if(!waiting) return;
+  pvtRTs.push(Date.now() - pvtStart);
   nextTrial();
 }
 
-/* move after ~60 sec */
+/* move after 60 sec */
 setTimeout(() => {
   clearTimeout(pvtTimeout);
-  document.getElementById("pvtScreen").classList.add("hidden");
-  startGNG();
+  startPosture();
 }, 60000);
 
-/* ---------------- GO/NO GO ---------------- */
-let gngTimeout;
-let active = false;
-
-function startGNG() {
-  document.getElementById("gngScreen").classList.remove("hidden");
-  active = true;
-  runGNG();
+/* ---------------- POSTURE ---------------- */
+function startPosture(){
+  show('posture');
 }
 
-function runGNG() {
-  let isGo = Math.random() > 0.3;
+function setPosture(v){ posture = v; }
+function setEnergy(v){ energy = v; }
+function setFocus(v){ focus = v; }
 
-  let btn = document.getElementById("gngButton");
-  btn.innerText = isGo ? "GREEN TAP" : "RED DON'T TAP";
-  btn.dataset.isGo = isGo;
-
-  gngTimeout = setTimeout(runGNG, 2000);
+function startBreathing(){
+  startBreathTimer();
 }
 
-function gngClick() {
-  if (!active) return;
-  if (document.getElementById("gngButton").dataset.isGo === "false") {
-    gngErrors++;
-  }
+/* ---------------- BREATHING ---------------- */
+let breathTime = 30;
+let breathInterval;
+
+function startBreathTimer(){
+  show('breathing');
+  breathTime = 30;
+
+  breathInterval = setInterval(() => {
+    breathTime--;
+    document.getElementById("breathTimer").innerText = breathTime;
+
+    if(breathTime <= 0){
+      clearInterval(breathInterval);
+    }
+  }, 1000);
 }
 
-/* auto move */
-setTimeout(() => {
-  active = false;
-  clearTimeout(gngTimeout);
-  document.getElementById("gngScreen").classList.add("hidden");
-  startBody();
-}, 45000);
-
-/* ---------------- BODY ---------------- */
-function startBody() {
-  document.getElementById("bodyScreen").classList.remove("hidden");
+function startHeart(){
+  breathRate = parseInt(document.getElementById("breathCount").value || 0);
+  startHeartTimer();
 }
 
-function setPosture(val) {
-  posture = val;
+/* ---------------- HEART RATE ---------------- */
+let heartTime = 15;
+let heartInterval;
+
+function startHeartTimer(){
+  show('heart');
+  heartTime = 15;
+
+  heartInterval = setInterval(() => {
+    heartTime--;
+    document.getElementById("heartTimer").innerText = heartTime;
+
+    if(heartTime <= 0){
+      clearInterval(heartInterval);
+    }
+  }, 1000);
 }
 
-function setBreath(val) {
-  breath = val;
-}
+function finish(){
+  heartRate = parseInt(document.getElementById("heartCount").value || 0) * 4;
 
-/* ---------------- RESULT ---------------- */
-function finish() {
-  document.getElementById("bodyScreen").classList.add("hidden");
-  document.getElementById("resultScreen").classList.remove("hidden");
+  show('result');
 
   let avg = pvtRTs.reduce((a,b)=>a+b,0)/pvtRTs.length;
-
   let variability = 0;
-  for (let i=1;i<pvtRTs.length;i++){
+
+  for(let i=1;i<pvtRTs.length;i++){
     variability += Math.abs(pvtRTs[i]-pvtRTs[i-1]);
   }
 
   let state = "";
   let reset = "";
 
-  if (variability > 250 || gngErrors > 3) {
+  /* ---------------- STATE LOGIC ---------------- */
+
+  if(variability > 250){
     state = "Cognitive Overload";
-    reset = "60 sec: stop input + focus on one thing.";
+    reset = "60 sec single-focus + reduce inputs.";
   }
 
-  else if (avg > 450) {
+  else if(avg > 450){
     state = "Low Energy";
-    reset = "Walk or get sunlight for 2 minutes.";
+    reset = "Move + sunlight + hydration.";
   }
 
-  else if (breath === "fast" || posture === "tight") {
+  else if(breathRate > 18 || heartRate > 90){
     state = "High Arousal";
     reset = "Slow exhale breathing for 60 sec.";
   }
 
-  else {
-    state = "Stable";
-    reset = "No reset needed. Start task.";
+  else if(posture === "tight"){
+    state = "Physical Tension";
+    reset = "Open chest + stand + reset posture.";
   }
 
-  document.getElementById("stateOutput").innerText = state;
-  document.getElementById("resetOutput").innerText = reset;
+  else if(focus === "stuck"){
+    state = "Behavioral Block";
+    reset = "Start smallest possible action (2 min).";
+  }
+
+  else {
+    state = "Stable";
+    reset = "No reset needed.";
+  }
+
+  document.getElementById("stateOut").innerText = state;
+  document.getElementById("resetOut").innerText = reset;
 }
+
 </script>
 
 </body>
