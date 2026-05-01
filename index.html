@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>State Reset Check</title>
+
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+      background: #f7f7f7;
+    }
+
+    h2 {
+      margin-top: 20px;
+    }
+
+    button {
+      font-size: 18px;
+      padding: 16px;
+      margin: 10px;
+      width: 80%;
+      max-width: 300px;
+      border-radius: 12px;
+      border: none;
+      background: #111;
+      color: white;
+    }
+
+    .hidden { display: none; }
+
+    #pvtButton {
+      font-size: 22px;
+      height: 120px;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 16px;
+      margin-top: 20px;
+    }
+
+    .small {
+      font-size: 14px;
+      color: #666;
+    }
+  </style>
+</head>
+
+<body>
+
+<h2>3-Minute Reset Check</h2>
+<p class="small">Tap start when ready</p>
+
+<div id="startScreen">
+  <button onclick="startTest()">Start</button>
+</div>
+
+<!-- PVT -->
+<div id="pvtScreen" class="hidden card">
+  <h3>Tap ONLY when screen turns green</h3>
+  <p id="pvtStatus">Wait...</p>
+  <button id="pvtButton" onclick="pvtClick()">WAIT</button>
+</div>
+
+<!-- Go/No-Go -->
+<div id="gngScreen" class="hidden card">
+  <h3>Tap GREEN only</h3>
+  <button id="gngButton" onclick="gngClick()">Start</button>
+</div>
+
+<!-- Body Check -->
+<div id="bodyScreen" class="hidden card">
+  <h3>Quick Check</h3>
+
+  <p>Posture</p>
+  <button onclick="setPosture('open')">Open</button>
+  <button onclick="setPosture('neutral')">Neutral</button>
+  <button onclick="setPosture('tight')">Tight</button>
+
+  <p>Breathing</p>
+  <button onclick="setBreath('slow')">Slow</button>
+  <button onclick="setBreath('normal')">Normal</button>
+  <button onclick="setBreath('fast')">Fast</button>
+
+  <br>
+  <button onclick="finish()">Get Result</button>
+</div>
+
+<!-- Result -->
+<div id="resultScreen" class="hidden card">
+  <h2 id="stateOutput"></h2>
+  <p id="resetOutput"></p>
+  <button onclick="location.reload()">Run Again</button>
+</div>
+
+<script>
+/* ---------------- STATE ---------------- */
+let pvtRTs = [];
+let gngErrors = 0;
+let posture = "";
+let breath = "";
+
+/* ---------------- START ---------------- */
+function startTest() {
+  document.getElementById("startScreen").classList.add("hidden");
+  startPVT();
+}
+
+/* ---------------- PVT ---------------- */
+let pvtStartTime;
+let waiting = false;
+let pvtTimeout;
+
+function startPVT() {
+  document.getElementById("pvtScreen").classList.remove("hidden");
+  nextTrial();
+}
+
+function nextTrial() {
+  let delay = Math.random() * 2000 + 1000;
+
+  document.getElementById("pvtButton").innerText = "WAIT";
+  document.getElementById("pvtStatus").innerText = "Wait...";
+
+  waiting = false;
+
+  pvtTimeout = setTimeout(() => {
+    document.getElementById("pvtButton").innerText = "TAP!";
+    document.getElementById("pvtStatus").innerText = "GO!";
+    pvtStartTime = Date.now();
+    waiting = true;
+  }, delay);
+}
+
+function pvtClick() {
+  if (!waiting) return;
+  let rt = Date.now() - pvtStartTime;
+  pvtRTs.push(rt);
+  nextTrial();
+}
+
+/* move after ~60 sec */
+setTimeout(() => {
+  clearTimeout(pvtTimeout);
+  document.getElementById("pvtScreen").classList.add("hidden");
+  startGNG();
+}, 60000);
+
+/* ---------------- GO/NO GO ---------------- */
+let gngTimeout;
+let active = false;
+
+function startGNG() {
+  document.getElementById("gngScreen").classList.remove("hidden");
+  active = true;
+  runGNG();
+}
+
+function runGNG() {
+  let isGo = Math.random() > 0.3;
+
+  let btn = document.getElementById("gngButton");
+  btn.innerText = isGo ? "GREEN TAP" : "RED DON'T TAP";
+  btn.dataset.isGo = isGo;
+
+  gngTimeout = setTimeout(runGNG, 2000);
+}
+
+function gngClick() {
+  if (!active) return;
+  if (document.getElementById("gngButton").dataset.isGo === "false") {
+    gngErrors++;
+  }
+}
+
+/* auto move */
+setTimeout(() => {
+  active = false;
+  clearTimeout(gngTimeout);
+  document.getElementById("gngScreen").classList.add("hidden");
+  startBody();
+}, 45000);
+
+/* ---------------- BODY ---------------- */
+function startBody() {
+  document.getElementById("bodyScreen").classList.remove("hidden");
+}
+
+function setPosture(val) {
+  posture = val;
+}
+
+function setBreath(val) {
+  breath = val;
+}
+
+/* ---------------- RESULT ---------------- */
+function finish() {
+  document.getElementById("bodyScreen").classList.add("hidden");
+  document.getElementById("resultScreen").classList.remove("hidden");
+
+  let avg = pvtRTs.reduce((a,b)=>a+b,0)/pvtRTs.length;
+
+  let variability = 0;
+  for (let i=1;i<pvtRTs.length;i++){
+    variability += Math.abs(pvtRTs[i]-pvtRTs[i-1]);
+  }
+
+  let state = "";
+  let reset = "";
+
+  if (variability > 250 || gngErrors > 3) {
+    state = "Cognitive Overload";
+    reset = "60 sec: stop input + focus on one thing.";
+  }
+
+  else if (avg > 450) {
+    state = "Low Energy";
+    reset = "Walk or get sunlight for 2 minutes.";
+  }
+
+  else if (breath === "fast" || posture === "tight") {
+    state = "High Arousal";
+    reset = "Slow exhale breathing for 60 sec.";
+  }
+
+  else {
+    state = "Stable";
+    reset = "No reset needed. Start task.";
+  }
+
+  document.getElementById("stateOutput").innerText = state;
+  document.getElementById("resetOutput").innerText = reset;
+}
+</script>
+
+</body>
+</html>
